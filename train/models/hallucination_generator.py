@@ -1,11 +1,12 @@
-import re
+import regex as re
 import random
 import spacy
+import torch
 
 from nltk.corpus import stopwords
-from benepar.spacy_plugin import BeneparComponent
+from benepar import BeneparComponent
 
-from models.bart import BART
+from transformers import BartConfig, BartForConditionalGeneration, BartTokenizerFast
 
 
 MAX_LENGTH = 256
@@ -15,16 +16,28 @@ re_special_tokens = [
     '.', '^', '$', '*', '+', '?', '|', '(', ')', '{', '}', '[', ']']
 
 
+CLINBART_WEIGHTS = '/nlp/projects/kabupra/cumc/clinbart/weights/bs50/clinbart/pjbimuje/checkpoints/' \
+                   'epoch=9-step=428921.ckpt'
+
+HF_MODEL = 'facebook/bart-base'
+
+
 class HallucinationGenerator:
     def __init__(self, device):
         self._device = device
+        self._nlp_tokenizer = spacy.load('en_core_web_sm')
 
-        self._tokenizer = spacy.load('en')
+        print('Loading self-attentive parser from Benepar')
+        self._parser = spacy.load('en_core_web_sm')
+        self._parser.add_pipe('benepar', config={'model': 'benepar_en3_large'})
 
-        self._parser = spacy.load('en')
-        self._parser.add_pipe(BeneparComponent('benepar_en3_large'))
-
-        self._infiller = BART(init='bart.large').to(self._device)
+        bart_config = BartConfig.from_pretrained(HF_MODEL)
+        self._tokenizer = BartTokenizerFast.from_pretrained(HF_MODEL)
+        print(f'Loading clinical BART weights from {CLINBART_WEIGHTS}')
+        weights = torch.load(CLINBART_WEIGHTS, map_location=f'cuda:{device}')['state_dict']
+        just_bart = {k.replace('model.', '', 1): v for k, v in weights.items() if k.startswith('model.')}
+        self._infiller = BartForConditionalGeneration(config=bart_config).to(self._device)
+        self._infiller.load_state_dict(state_dict=just_bart)
 
     def parse(self, text):
         return list(self._parser(text).sents)
@@ -74,18 +87,22 @@ class HallucinationGenerator:
         if result is None:
             return None
 
+        input_ids = self._tokenizer(
+            [result['template']], return_tensors='pt', max_length=512, truncation=True
+        ).to(self._device)['input_ids']
+
         gen_text = self._infiller.generate(
-            src_texts=[result['template']],
-            sampling=True,
-            topp=SAMPLING_TOPP,
-            max_len=MAX_LENGTH)[0]
+            input_ids=input_ids,
+            max_length=MAX_LENGTH,
+            top_p=0.95,
+            do_sample=True
+        )
 
-        gen_text = self.cleantext(gen_text)
-
+        gen_text = self._tokenizer.batch_decode(gen_text, skip_special_tokens=True)[0]
         pattern = result['template']
         for special_token in re_special_tokens:
             pattern = pattern.replace(special_token, f'\{special_token}')
-        pattern = pattern.replace('<mask>', '(.*)')
+        pattern = re.sub(pattern, r'\s+<mask>\s+', '\s+(.*)\s+')
         pattern = pattern + '$'
 
         try:
@@ -104,7 +121,7 @@ class HallucinationGenerator:
             return result
 
     def cleantext(self, text):
-        return ' '.join([token.text for token in self._tokenizer(text)])
+        return ' '.join([token.text for token in self._nlp_tokenizer(text)])
 
     def hallucinate(self, input_text):
         roots = self.parse(input_text)

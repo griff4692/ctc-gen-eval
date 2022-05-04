@@ -25,7 +25,7 @@ def get_dataloaders(dataset, batch_size, num_workers, shuffle, collate_fn):
         collate_fn=collate_fn,
         shuffle=shuffle,
         num_workers=num_workers)
-        for split in ['train', 'dev']}
+        for split in ['train', 'validation']}
 
 
 def text_clean(text, remove_linefeed=False):

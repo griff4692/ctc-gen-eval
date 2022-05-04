@@ -1,5 +1,4 @@
 from collections import Counter
-import os
 from typing import List
 
 import torch
@@ -7,12 +6,11 @@ from torch import nn
 
 from pytorch_lightning import LightningModule
 
-from transformers import RobertaConfig, RobertaTokenizer, RobertaModel, RobertaTokenizerFast
+from transformers import RobertaModel, RobertaTokenizerFast
 from models.aligner import Aligner
 from transformers import AdamW, get_linear_schedule_with_warmup, AutoTokenizer
 from sklearn.metrics import f1_score
-from data_utils.data_utils import TokenClassificationExample, \
-    text_clean, get_words
+from data_utils.data_utils import TokenClassificationExample, text_clean, get_words
 
 
 INIT = 'roberta-large'
@@ -24,8 +22,7 @@ class DiscriminativeAligner(Aligner, LightningModule):
         Aligner.__init__(self, aggr_type)
         LightningModule.__init__(self)
         self._roberta = RobertaModel.from_pretrained('roberta-large')
-        self._roberta_tokenizer = RobertaTokenizerFast.from_pretrained(
-            'roberta-large')
+        self._roberta_tokenizer = RobertaTokenizerFast.from_pretrained('roberta-large')
 
         self._classifier = nn.Linear(
             self._roberta.config.hidden_size, 2)
@@ -67,7 +64,7 @@ class DiscriminativeAligner(Aligner, LightningModule):
         alignment = self.align_bpe_to_words(bpe_toks, words)
         aligned_feats = self.align_features_to_words(features, alignment)
 
-        assert len(words) + 2 == len(aligned_feats), 'words length {} does not match feature lenth {}. '.format(
+        assert len(words) + 2 == len(aligned_feats), 'words length {} does not match feature length {}. '.format(
             len(words), len(aligned_feats))
 
         return aligned_feats[1:-1]
