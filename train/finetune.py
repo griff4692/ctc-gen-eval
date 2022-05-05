@@ -1,6 +1,7 @@
 import os
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 import argparse
-import ujson
+
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -13,7 +14,7 @@ from models.discriminative_aligner import DiscriminativeAligner
 
 BATCH_SIZE = 16
 ACCUMULATE_GRAD_BATCHES = 1
-NUM_WORKERS = 0  # 6
+NUM_WORKERS = 6
 WARMUP_PROPORTION = 0.1
 ADAM_EPSILON = 1e-8
 WEIGHT_DECAY = 0.01
@@ -21,7 +22,7 @@ LR = 1e-5
 VAL_CHECK_INTERVAL = 1. / 4
 
 
-def main(args, n_epochs=1):
+def main(args):
     splits = ['train', 'validation']
     dataset = {split: ConstructedDiscriminativeDataset(split, args.data_dir) for split in splits}
 
@@ -34,7 +35,7 @@ def main(args, n_epochs=1):
 
     model = DiscriminativeAligner(aggr_type=None)
 
-    train_steps = n_epochs * (
+    train_steps = args.max_epochs * (
             len(dataloader['train']) // ACCUMULATE_GRAD_BATCHES + 1)
     warmup_steps = int(train_steps * WARMUP_PROPORTION)
     model.set_hparams(
@@ -46,12 +47,12 @@ def main(args, n_epochs=1):
         weight_decay=WEIGHT_DECAY,
         adam_epsilon=ADAM_EPSILON)
 
-    ckpt_filename = f'disc'
-    dirpath = os.path.join(args.data_dir, 'weights')
-    os.makedirs(dirpath, exist_ok=True)
+    # ckpt_filename = f'disc'
+    experiment_dir = os.path.join(args.data_dir, 'weights', 'baseline')
+    print(f'Saving weights in {experiment_dir}...')
+    os.makedirs(experiment_dir, exist_ok=True)
     checkpoint_callback = ModelCheckpoint(
-        dirpath=dirpath,
-        filename=ckpt_filename,
+        # filename=ckpt_filename,
         monitor='val_f1',
         mode='max',
         save_top_k=1,
@@ -59,11 +60,12 @@ def main(args, n_epochs=1):
     )
 
     trainer = pl.Trainer(
-        max_epochs=n_epochs,
-        checkpoint_callback=checkpoint_callback,
+        max_epochs=args.max_epochs,
+        callbacks=checkpoint_callback,
         accumulate_grad_batches=ACCUMULATE_GRAD_BATCHES,
         val_check_interval=VAL_CHECK_INTERVAL,
-        gpus=1
+        gpus=1,
+        default_root_dir=experiment_dir,
     )
 
     trainer.fit(model, dataloader['train'], dataloader['validation'])
@@ -72,6 +74,7 @@ def main(args, n_epochs=1):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Parser to Fine-Tune Discriminative CTC Model')
     parser.add_argument('--device', type=int, default=0)
+    parser.add_argument('--max_epochs', type=int, default=2)
     parser.add_argument('--data_dir', default='/nlp/projects/kabupra/cumc/ctc')
     parser.add_argument('-debug', action='store_true', default=False)
     args = parser.parse_args()

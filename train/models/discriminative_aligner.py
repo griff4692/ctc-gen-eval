@@ -1,3 +1,4 @@
+import os
 from collections import Counter
 from typing import List
 
@@ -13,7 +14,7 @@ from sklearn.metrics import f1_score
 from data_utils.data_utils import TokenClassificationExample, text_clean, get_words
 
 
-INIT = 'roberta-large'
+INIT = os.path.expanduser('~/RoBERTa-base-PM-M3-Voc-distill-align-hf')
 MAX_LENGTH = 512
 
 
@@ -21,12 +22,11 @@ class DiscriminativeAligner(Aligner, LightningModule):
     def __init__(self, aggr_type):
         Aligner.__init__(self, aggr_type)
         LightningModule.__init__(self)
-        self._roberta = RobertaModel.from_pretrained('roberta-large')
-        self._roberta_tokenizer = RobertaTokenizerFast.from_pretrained('roberta-large')
+        self._roberta = RobertaModel.from_pretrained(INIT)
+        self._roberta_tokenizer = RobertaTokenizerFast.from_pretrained(INIT)
 
-        self._classifier = nn.Linear(
-            self._roberta.config.hidden_size, 2)
-        self._tokenizer = AutoTokenizer.from_pretrained("roberta-large")
+        self._classifier = nn.Linear(self._roberta.config.hidden_size, 2)
+        self._tokenizer = AutoTokenizer.from_pretrained(INIT)
 
         self._hparams = None
 

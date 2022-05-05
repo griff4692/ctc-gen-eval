@@ -1,5 +1,4 @@
 from collections import Counter
-import os
 from typing import List
 
 import torch
@@ -7,11 +6,10 @@ from torch import nn
 
 from ctc_score.models.aligner import Aligner
 
-from transformers import AdamW, get_linear_schedule_with_warmup, AutoTokenizer
-from transformers import RobertaConfig, RobertaModel, RobertaTokenizerFast
+from transformers import AutoTokenizer
+from transformers import RobertaModel, RobertaTokenizerFast
 
-from ctc_score.data_utils.data_utils import TokenClassificationExample, \
-    text_clean, get_words
+from ctc_score.data_utils.data_utils import text_clean, get_words
 
 
 INIT = 'roberta.large'

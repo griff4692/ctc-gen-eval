@@ -16,8 +16,8 @@ re_special_tokens = [
     '.', '^', '$', '*', '+', '?', '|', '(', ')', '{', '}', '[', ']']
 
 
-CLINBART_WEIGHTS = '/nlp/projects/kabupra/cumc/clinbart/weights/bs50/clinbart/pjbimuje/checkpoints/' \
-                   'epoch=9-step=428921.ckpt'
+CLINBART_WEIGHTS = '/nlp/projects/kabupra/cumc/clinbart/weights/baseline/clinbart/34uqv28u/checkpoints/' \
+                   'epoch=9-step=477919.ckpt'
 
 HF_MODEL = 'facebook/bart-base'
 
@@ -87,6 +87,14 @@ class HallucinationGenerator:
         if result is None:
             return None
 
+        # Fix template to look like original sentence
+        resolved_template = str(root)
+        for answer in result['answers']:
+            resolved_template = resolved_template.replace(answer, '<mask>')
+
+        result['template_ctc'] = result['template']
+        result['template'] = resolved_template
+
         input_ids = self._tokenizer(
             [result['template']], return_tensors='pt', max_length=512, truncation=True
         ).to(self._device)['input_ids']
@@ -101,8 +109,8 @@ class HallucinationGenerator:
         gen_text = self._tokenizer.batch_decode(gen_text, skip_special_tokens=True)[0]
         pattern = result['template']
         for special_token in re_special_tokens:
-            pattern = pattern.replace(special_token, f'\{special_token}')
-        pattern = re.sub(pattern, r'\s+<mask>\s+', '\s+(.*)\s+')
+            pattern = pattern.replace(special_token, f'\{special_token}', 1)
+        pattern = re.sub(r'\s?<mask>\s?', '(.*)', pattern)
         pattern = pattern + '$'
 
         try:
