@@ -83,10 +83,10 @@ def main(args):
     hallu_generator = HallucinationGenerator(device=args.device)
     results = []
     for example in tqdm(examples, desc=f'Constructing'):
-        target = remove_tags_from_sent(example['predicted_sentence'])
+        target = remove_tags_from_sent(example['summary'])
         if len(target.split(' ')) > args.max_sent_toks:
             continue
-        example['context_sents'] = list(map(remove_tags_from_sent, example['context_sents']))
+        example['context'] = remove_tags_from_sent(example.pop('text'))
 
         halluc_info = construct_summ_ref(
             input_text=target,
@@ -109,19 +109,20 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Parser to generate BART Mask-and-Fill')
     parser.add_argument('--device', type=int, default=0)
-    parser.add_argument('-debug', action='store_true', default=False)
+    parser.add_argument('--data_dir', default='/nlp/projects/summarization/kabupra/cumc')
     parser.add_argument('--max_sent_toks', default=128, type=int)
+    parser.add_argument('--algorithm', default='gain_rouge')
     parser.add_argument('--target_size', type=int, default=10000)
-    parser.add_argument('--split', type=str, default='train', choices=['train', 'validation'])  # Don't use test
+    parser.add_argument('--splits', type=str, default='train,validation')
     args = parser.parse_args()
 
-    mini_str = '_mini' if args.debug else ''
-    args.data_fn = f'/nlp/projects/kabupra/cumc/contexts/{args.split}{mini_str}.json'
-    args.out_dir = '/nlp/projects/kabupra/cumc/ctc'
-    os.makedirs(args.out_dir, exist_ok=True)
-    args.out_fn = os.path.join(args.out_dir, f'{args.split}{mini_str}.json')
+    for split in args.splits.split(','):
+        args.data_fn = os.path.join(args.data_dir, 'human', 'bart_align_datasets', f'{split}_{args.algorithm}.json')
+        args.out_dir = os.path.join(args.data_dir, 'ctc')
+        os.makedirs(args.out_dir, exist_ok=True)
+        args.out_fn = os.path.join(args.out_dir, f'{split}_{args.algorithm}.json')
 
-    results = main(args)
-    print(f'Saving {len(results)} results to {args.out_fn}')
-    with open(args.out_fn, 'w') as fd:
-        ujson.dump(results, fd)
+        results = main(args)
+        print(f'Saving {len(results)} results to {args.out_fn}')
+        with open(args.out_fn, 'w') as fd:
+            ujson.dump(results, fd)

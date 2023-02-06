@@ -32,7 +32,7 @@ class ConstructedDiscriminativeDataset(Dataset):
                     template=example['template'],
                     answers=example['answers'],
                     fillings=example['fillings'])
-                context = text_clean(' '.join(example['context_sents']))
+                context = text_clean(example['context'])
                 input_text = text_clean(input_text)
                 example = TokenClassificationExample(context=context, input_text=input_text, labels=labels)
                 self._examples.append(example)
