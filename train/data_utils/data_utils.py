@@ -15,7 +15,7 @@ TokenClassificationExample = namedtuple('TokenClassificationExample', [
 TestExample = namedtuple('TestExample', ['system', 'input_text', 'context', 'score'])
 
 
-def get_dataloaders(dataset, batch_size, num_workers, shuffle, collate_fn):
+def get_dataloaders(dataset, batch_size, num_workers, collate_fn):
     if collate_fn == 'raw':
         collate_fn = lambda raw_batch: raw_batch
 
@@ -23,7 +23,7 @@ def get_dataloaders(dataset, batch_size, num_workers, shuffle, collate_fn):
         dataset=dataset[split],
         batch_size=batch_size,
         collate_fn=collate_fn,
-        shuffle=shuffle,
+        shuffle=split=='train',
         num_workers=num_workers)
         for split in ['train', 'validation']}
 

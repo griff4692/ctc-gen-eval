@@ -13,10 +13,10 @@ def remove_tags_from_sent(str):
 
 
 class ConstructedDiscriminativeDataset(Dataset):
-    def __init__(self, split, data_dir):
+    def __init__(self, split, algorithm, data_dir):
         self._examples = []
 
-        data_fn = os.path.join(data_dir, f'{split}.json')
+        data_fn = os.path.join(data_dir, f'{split}_{algorithm}.json')
         print(f'Loading data from {data_fn}')
         with open(data_fn, 'r') as fd:
             examples = ujson.load(fd)

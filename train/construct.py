@@ -73,8 +73,9 @@ def construct_summ_ref(input_text, hallu_generator):
 
 def main(args):
     print(f'Reading in data from {args.data_fn}')
+
     with open(args.data_fn, 'r') as fd:
-        examples = ujson.load(fd)
+        examples = [ujson.loads(x.strip()) for x in fd.readlines() if len(x.strip()) > 0]
 
     # Randomly shuffle the data
     np.random.seed(1992)
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_sent_toks', default=128, type=int)
     parser.add_argument('--algorithm', default='gain_rouge')
     parser.add_argument('--target_size', type=int, default=10000)
-    parser.add_argument('--splits', type=str, default='train,validation')
+    parser.add_argument('--splits', type=str, default='validation,train')
     args = parser.parse_args()
 
     for split in args.splits.split(','):

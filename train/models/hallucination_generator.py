@@ -16,7 +16,7 @@ re_special_tokens = [
     '.', '^', '$', '*', '+', '?', '|', '(', ')', '{', '}', '[', ']']
 
 
-CLINBART_WEIGHTS = '/nlp/projects/kabupra/cumc/clinbart/weights/baseline/clinbart/34uqv28u/checkpoints/' \
+CLINBART_WEIGHTS = '/nlp/projects/summarization/kabupra/cumc/clinbart/34uqv28u/checkpoints/' \
                    'epoch=9-step=477919.ckpt'
 
 HF_MODEL = 'facebook/bart-base'
